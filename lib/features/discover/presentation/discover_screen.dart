@@ -8,17 +8,20 @@ import '../../catalog/domain/media_summary.dart';
 import '../../catalog/presentation/media_details_screen.dart';
 import '../../catalog/presentation/widgets/catalog_poster_card.dart';
 import '../../catalog/presentation/widgets/tmdb_setup_card.dart';
+import '../../progress/application/episode_progress_controller.dart';
 import '../../watchlist/application/watchlist_controller.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({
     required this.client,
     required this.watchlist,
+    required this.episodeProgress,
     super.key,
   });
 
   final TmdbClient client;
   final WatchlistController watchlist;
+  final EpisodeProgressController episodeProgress;
 
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
@@ -69,6 +72,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           media: media,
           client: widget.client,
           watchlist: widget.watchlist,
+          episodeProgress: widget.episodeProgress,
         ),
       ),
     );

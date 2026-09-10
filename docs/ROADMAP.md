@@ -14,9 +14,11 @@
 
 ## Phase 2 — Accounts and tracking
 
+- [x] Device-persistent season and episode progress
+- [x] Next-episode continue-watching card
 - Supabase project and authentication
 - Supabase watchlist sync and viewing statuses
-- Season and episode progress
+- Supabase episode progress sync
 - Offline queue and synchronization
 
 ## Phase 3 — Retention

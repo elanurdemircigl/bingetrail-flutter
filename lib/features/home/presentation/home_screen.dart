@@ -4,23 +4,27 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../catalog/data/tmdb_client.dart';
 import '../../catalog/domain/media_summary.dart';
+import '../../catalog/domain/tv_season.dart';
 import '../../catalog/presentation/media_details_screen.dart';
 import '../../catalog/presentation/widgets/catalog_poster_card.dart';
+import '../../catalog/presentation/widgets/network_poster.dart';
 import '../../catalog/presentation/widgets/tmdb_setup_card.dart';
+import '../../progress/application/episode_progress_controller.dart';
+import '../../progress/domain/episode_progress.dart';
 import '../../watchlist/application/watchlist_controller.dart';
-import '../data/demo_media.dart';
-import '../domain/media_item.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     required this.client,
     required this.watchlist,
+    required this.episodeProgress,
     required this.onDiscover,
     super.key,
   });
 
   final TmdbClient client;
   final WatchlistController watchlist;
+  final EpisodeProgressController episodeProgress;
   final VoidCallback onDiscover;
 
   @override
@@ -29,6 +33,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<MediaSummary>> _trending;
+  late Future<_ContinueWatchingData?> _continueWatching;
 
   @override
   void initState() {
@@ -36,6 +41,57 @@ class _HomeScreenState extends State<HomeScreen> {
     _trending = widget.client.isConfigured
         ? widget.client.trending()
         : Future.value(const []);
+    _continueWatching = _resolveContinueWatching();
+    widget.episodeProgress.addListener(_refreshContinueWatching);
+  }
+
+  @override
+  void dispose() {
+    widget.episodeProgress.removeListener(_refreshContinueWatching);
+    super.dispose();
+  }
+
+  void _refreshContinueWatching() {
+    if (mounted) {
+      setState(() {
+        _continueWatching = _resolveContinueWatching();
+      });
+    }
+  }
+
+  Future<_ContinueWatchingData?> _resolveContinueWatching() async {
+    if (!widget.client.isConfigured ||
+        !widget.episodeProgress.isLoaded ||
+        widget.episodeProgress.entries.isEmpty) {
+      return null;
+    }
+
+    for (final progress in widget.episodeProgress.entries) {
+      final details = await widget.client.details(progress.series);
+      for (final season in details.seasons) {
+        final seasonDetails = await widget.client.seasonDetails(
+          progress.series.id,
+          season.seasonNumber,
+        );
+        for (final episode in seasonDetails.episodes) {
+          if (episode.hasAired() &&
+              !progress.watchedEpisodeKeys.contains(episode.key)) {
+            final total = details.numberOfEpisodes ?? 0;
+            final ratio = total == 0
+                ? 0.0
+                : (progress.watchedEpisodeKeys.length / total)
+                      .clamp(0.0, 1.0)
+                      .toDouble();
+            return _ContinueWatchingData(
+              progress: progress,
+              nextEpisode: episode,
+              completion: ratio,
+            );
+          }
+        }
+      }
+    }
+    return null;
   }
 
   void _openDetails(MediaSummary media) {
@@ -45,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
           media: media,
           client: widget.client,
           watchlist: widget.watchlist,
+          episodeProgress: widget.episodeProgress,
         ),
       ),
     );
@@ -77,7 +134,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 30),
                 const _SectionHeader(title: 'Continue Watching'),
                 const SizedBox(height: 14),
-                const _ContinueWatchingCard(item: DemoMedia.continueWatching),
+                FutureBuilder<_ContinueWatchingData?>(
+                  future: _continueWatching,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const _ContinueWatchingLoading();
+                    }
+                    if (snapshot.hasError) {
+                      return _ContinueWatchingError(
+                        onRetry: _refreshContinueWatching,
+                      );
+                    }
+                    final data = snapshot.data;
+                    if (data == null) {
+                      return _EmptyContinueWatching(
+                        onDiscover: widget.onDiscover,
+                      );
+                    }
+                    return _ContinueWatchingCard(
+                      data: data,
+                      onOpen: () => _openDetails(data.progress.series),
+                      onMarkWatched: () => widget.episodeProgress.toggleEpisode(
+                        data.progress.series,
+                        data.nextEpisode,
+                      ),
+                    );
+                  },
+                ),
                 const SizedBox(height: 32),
                 _SectionHeader(
                   title: 'Trending This Week',
@@ -197,74 +280,167 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _ContinueWatchingCard extends StatelessWidget {
-  const _ContinueWatchingCard({required this.item});
+  const _ContinueWatchingCard({
+    required this.data,
+    required this.onOpen,
+    required this.onMarkWatched,
+  });
 
-  final MediaItem item;
+  final _ContinueWatchingData data;
+  final VoidCallback onOpen;
+  final Future<void> Function() onMarkWatched;
 
   @override
   Widget build(BuildContext context) {
-    final accent = Color(item.colorValue);
-
-    return Container(
-      height: 190,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [accent.withValues(alpha: 0.9), const Color(0xFF24202A)],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: SizedBox(
+        height: 190,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            NetworkPoster(imageUrl: data.progress.series.backdropUrl),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xB5090A0F), Color(0xF024202A)],
+                ),
+              ),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onOpen,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.42),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: const Text(
+                              'UP NEXT',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton.filled(
+                            tooltip: 'Mark episode as watched',
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                            ),
+                            onPressed: onMarkWatched,
+                            icon: const Icon(Icons.check_rounded),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Text(
+                        data.progress.series.title,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${data.nextEpisode.code} · ${data.nextEpisode.name}',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 14),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: LinearProgressIndicator(
+                          value: data.completion,
+                          minHeight: 5,
+                          color: Colors.white,
+                          backgroundColor: Colors.white24,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: const Text(
-                  'UP NEXT',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-                ),
-              ),
-              const Spacer(),
-              IconButton.filled(
-                tooltip: 'Mark episode as watched',
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                ),
-                onPressed: () {},
-                icon: const Icon(Icons.check_rounded),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(item.title, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 4),
-          Text(
-            item.nextEpisode ?? '',
-            style: const TextStyle(color: Colors.white70),
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: item.progress,
-              minHeight: 5,
-              color: Colors.white,
-              backgroundColor: Colors.white24,
-            ),
-          ),
-        ],
+    );
+  }
+}
+
+class _ContinueWatchingData {
+  const _ContinueWatchingData({
+    required this.progress,
+    required this.nextEpisode,
+    required this.completion,
+  });
+
+  final EpisodeProgress progress;
+  final TvEpisode nextEpisode;
+  final double completion;
+}
+
+class _ContinueWatchingLoading extends StatelessWidget {
+  const _ContinueWatchingLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 150,
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _EmptyContinueWatching extends StatelessWidget {
+  const _EmptyContinueWatching({required this.onDiscover});
+
+  final VoidCallback onDiscover;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(18),
+        leading: const Icon(Icons.play_circle_outline_rounded),
+        title: const Text('Your next episode will appear here.'),
+        subtitle: const Text(
+          'Open a TV series and mark an episode as watched.',
+        ),
+        trailing: TextButton(
+          onPressed: onDiscover,
+          child: const Text('Explore'),
+        ),
+      ),
+    );
+  }
+}
+
+class _ContinueWatchingError extends StatelessWidget {
+  const _ContinueWatchingError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.cloud_off_rounded, color: AppTheme.coral),
+        title: const Text('Your next episode could not be loaded.'),
+        trailing: TextButton(onPressed: onRetry, child: const Text('Retry')),
       ),
     );
   }

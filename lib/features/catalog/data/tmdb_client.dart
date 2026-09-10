@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../core/config/app_config.dart';
 import '../domain/media_details.dart';
 import '../domain/media_summary.dart';
+import '../domain/tv_season.dart';
 
 class TmdbClient {
   TmdbClient({
@@ -47,6 +48,13 @@ class TmdbClient {
     final type = media.kind == MediaKind.movie ? 'movie' : 'tv';
     final body = await _get('/3/$type/${media.id}', {'language': _language});
     return MediaDetails.fromTmdb(body, media.kind);
+  }
+
+  Future<TvSeasonDetails> seasonDetails(int seriesId, int seasonNumber) async {
+    final body = await _get('/3/tv/$seriesId/season/$seasonNumber', {
+      'language': _language,
+    });
+    return TvSeasonDetails.fromTmdb(body);
   }
 
   void close() {

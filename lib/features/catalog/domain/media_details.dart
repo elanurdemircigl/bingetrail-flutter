@@ -1,4 +1,5 @@
 import 'media_summary.dart';
+import 'tv_season.dart';
 
 class MediaDetails {
   const MediaDetails({
@@ -8,6 +9,7 @@ class MediaDetails {
     this.numberOfSeasons,
     this.numberOfEpisodes,
     this.status,
+    this.seasons = const [],
   });
 
   factory MediaDetails.fromTmdb(Map<String, dynamic> json, MediaKind kind) {
@@ -32,6 +34,13 @@ class MediaDetails {
       numberOfSeasons: (json['number_of_seasons'] as num?)?.toInt(),
       numberOfEpisodes: (json['number_of_episodes'] as num?)?.toInt(),
       status: json['status'] as String?,
+      seasons:
+          (json['seasons'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(TvSeasonSummary.fromTmdb)
+              .where((season) => season.seasonNumber > 0)
+              .toList(growable: false)
+            ..sort((a, b) => a.seasonNumber.compareTo(b.seasonNumber)),
     );
   }
 
@@ -41,6 +50,7 @@ class MediaDetails {
   final int? numberOfSeasons;
   final int? numberOfEpisodes;
   final String? status;
+  final List<TvSeasonSummary> seasons;
 
   String get facts {
     final parts = <String>[summary.year, summary.kindLabel];

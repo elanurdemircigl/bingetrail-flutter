@@ -4,7 +4,7 @@
 
 BingeTrail is a privacy-minded movie and TV tracking app. It is being built with Flutter for Android, iOS, and the web, with Supabase planned for authentication and synchronized user data.
 
-> Current status: interactive MVP foundation with live TMDB discovery. Continue-watching progress remains demo data until accounts and episode tracking are connected.
+> Current status: interactive MVP with live TMDB discovery, a local watchlist, and device-persistent episode progress.
 
 ## What is ready
 
@@ -12,7 +12,9 @@ BingeTrail is a privacy-minded movie and TV tracking app. It is being built with
 - Home, Discover, Calendar, and Profile destinations
 - Live TMDB trending, search, posters, and movie/TV detail pages
 - A persistent local watchlist on mobile and web
-- Continue-watching, schedule, and statistics UI foundations
+- Season and episode lists with watched/unwatched controls
+- A real continue-watching card that finds the next aired episode
+- Schedule and statistics UI foundations
 - Feature-first source layout
 - Initial Supabase database migration with row-level security
 - Widget smoke tests and GitHub Actions CI
@@ -23,7 +25,7 @@ BingeTrail is a privacy-minded movie and TV tracking app. It is being built with
 - Email, Google, and Apple authentication
 - Supabase-backed watchlist synchronization
 - Watchlist and viewing statuses
-- Season and episode progress
+- Account-backed episode progress synchronization
 - Ratings and personal notes
 - Release calendar and notifications
 - JSON/CSV data export

@@ -59,4 +59,50 @@ void main() {
 
     expect(client.trending, throwsA(isA<TmdbConfigurationException>()));
   });
+
+  test('season details parses episodes in episode order', () async {
+    final client = TmdbClient(
+      accessToken: 'test-token',
+      client: MockClient((request) async {
+        expect(request.url.path, '/3/tv/7/season/2');
+        return http.Response(
+          '''
+          {
+            "id": 20,
+            "name": "Season 2",
+            "season_number": 2,
+            "episodes": [
+              {
+                "id": 202,
+                "name": "Second",
+                "season_number": 2,
+                "episode_number": 2,
+                "overview": "Two",
+                "air_date": "2025-02-02",
+                "runtime": 48
+              },
+              {
+                "id": 201,
+                "name": "First",
+                "season_number": 2,
+                "episode_number": 1,
+                "overview": "One",
+                "air_date": "2025-02-01"
+              }
+            ]
+          }
+          ''',
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+
+    final season = await client.seasonDetails(7, 2);
+
+    expect(season.name, 'Season 2');
+    expect(season.episodes, hasLength(2));
+    expect(season.episodes.first.code, 'S02 E01');
+    expect(season.episodes.last.runtimeMinutes, 48);
+  });
 }
