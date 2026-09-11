@@ -80,6 +80,15 @@ class EpisodeProgressController extends ChangeNotifier {
     }
   }
 
+  Future<void> replaceFromSync(List<EpisodeProgress> entries) async {
+    _entries
+      ..clear()
+      ..addAll(entries);
+    _sort();
+    await _storage.write(_entries);
+    notifyListeners();
+  }
+
   void _sort() {
     _entries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }

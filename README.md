@@ -4,7 +4,7 @@
 
 BingeTrail is a privacy-minded movie and TV tracking app. It is being built with Flutter for Android, iOS, and the web, with Supabase planned for authentication and synchronized user data.
 
-> Current status: interactive MVP with live TMDB discovery, a local watchlist, and device-persistent episode progress.
+> Current status: interactive MVP with live TMDB discovery, account authentication, and Supabase-backed watchlist and episode synchronization.
 
 ## What is ready
 
@@ -14,6 +14,7 @@ BingeTrail is a privacy-minded movie and TV tracking app. It is being built with
 - A persistent local watchlist on mobile and web
 - Season and episode lists with watched/unwatched controls
 - A real continue-watching card that finds the next aired episode
+- Email/password accounts with cloud synchronization through Supabase
 - Schedule and statistics UI foundations
 - Feature-first source layout
 - Initial Supabase database migration with row-level security
@@ -22,10 +23,8 @@ BingeTrail is a privacy-minded movie and TV tracking app. It is being built with
 
 ## Planned MVP
 
-- Email, Google, and Apple authentication
-- Supabase-backed watchlist synchronization
+- Google and Apple authentication
 - Watchlist and viewing statuses
-- Account-backed episode progress synchronization
 - Ratings and personal notes
 - Release calendar and notifications
 - JSON/CSV data export
@@ -40,20 +39,20 @@ BingeTrail is a privacy-minded movie and TV tracking app. It is being built with
 
 ## Run locally
 
-First create a TMDB account and obtain an **API Read Access Token**. Copy the safe template:
+First obtain a TMDB **API Read Access Token** and create a Supabase project. Copy the safe template:
 
 ```powershell
 Copy-Item config/dev.example.json config/dev.json
 ```
 
-Open `config/dev.json`, replace the placeholder with your token, and run:
+Open `config/dev.json`, replace the placeholders with the TMDB token, Supabase project URL, and Supabase publishable key, then run:
 
 ```bash
 flutter pub get
 flutter run -d chrome --dart-define-from-file=config/dev.json
 ```
 
-`config/dev.json` is ignored by Git. Never commit the real token. The direct client connection is intended for development; use a backend or Supabase Edge Function as a token-hiding proxy before production release.
+`config/dev.json` is ignored by Git. Never commit the TMDB token or a Supabase secret/service-role key. The Supabase publishable key is intended for client applications and is protected by Row Level Security. The direct TMDB client connection is intended for development; use a backend or Supabase Edge Function as a token-hiding proxy before production release.
 
 Run project checks:
 
@@ -65,7 +64,7 @@ flutter test
 
 ## Configuration
 
-Copy `.env.example` to `.env` when the Supabase integration is added. Never commit the real `.env` file or service-role keys.
+The Supabase schema and Row Level Security policies are in `supabase/migrations`. Never place a Supabase secret or service-role key in this client project.
 
 TMDB attribution and licensing requirements must be reviewed before release. BingeTrail is not endorsed or certified by TMDB.
 

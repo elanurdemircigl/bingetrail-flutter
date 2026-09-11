@@ -7,6 +7,6 @@ When a Supabase project is available:
 1. Install and authenticate the Supabase CLI.
 2. Link this directory to the chosen project.
 3. Review the migration and run `supabase db push` yourself.
-4. Add the public project URL and anonymous key to the local `.env` file.
+4. Add the project URL and publishable key to the ignored `config/dev.json` file.
 
-Never expose or commit the Supabase service-role key.
+The publishable key is intended for client applications. Never expose or commit a Supabase secret or service-role key.

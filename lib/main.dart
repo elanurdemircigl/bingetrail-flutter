@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
+import 'core/config/app_config.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BingeTrailApp());
+
+  SupabaseClient? supabaseClient;
+  if (AppConfig.hasSupabaseConfiguration) {
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl,
+      publishableKey: AppConfig.supabasePublishableKey,
+    );
+    supabaseClient = Supabase.instance.client;
+  }
+
+  runApp(BingeTrailApp(supabaseClient: supabaseClient));
 }

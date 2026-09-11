@@ -52,4 +52,12 @@ class WatchlistController extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<void> replaceFromSync(List<MediaSummary> items) async {
+    _items
+      ..clear()
+      ..addAll(items);
+    await _storage.write(_items);
+    notifyListeners();
+  }
 }

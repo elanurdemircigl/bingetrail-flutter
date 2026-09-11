@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants/app_constants.dart';
 import '../features/catalog/data/tmdb_client.dart';
@@ -13,11 +14,13 @@ class BingeTrailApp extends StatelessWidget {
     this.client,
     this.watchlist,
     this.episodeProgress,
+    this.supabaseClient,
   });
 
   final TmdbClient? client;
   final WatchlistController? watchlist;
   final EpisodeProgressController? episodeProgress;
+  final SupabaseClient? supabaseClient;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +32,7 @@ class BingeTrailApp extends StatelessWidget {
         client: client,
         watchlist: watchlist,
         episodeProgress: episodeProgress,
+        supabaseClient: supabaseClient,
       ),
     );
   }

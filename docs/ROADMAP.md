@@ -16,9 +16,10 @@
 
 - [x] Device-persistent season and episode progress
 - [x] Next-episode continue-watching card
-- Supabase project and authentication
-- Supabase watchlist sync and viewing statuses
-- Supabase episode progress sync
+- [x] Supabase project and email/password authentication
+- [x] Supabase watchlist sync
+- [x] Supabase episode progress sync
+- Viewing statuses beyond the watchlist
 - Offline queue and synchronization
 
 ## Phase 3 — Retention

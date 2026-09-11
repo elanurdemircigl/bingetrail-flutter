@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/widgets/responsive_content.dart';
+import '../features/auth/application/auth_controller.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/catalog/data/tmdb_client.dart';
 import '../features/discover/presentation/discover_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/progress/application/episode_progress_controller.dart';
+import '../features/sync/application/cloud_sync_controller.dart';
 import '../features/watchlist/application/watchlist_controller.dart';
 
 class AppShell extends StatefulWidget {
@@ -17,11 +20,13 @@ class AppShell extends StatefulWidget {
     this.client,
     this.watchlist,
     this.episodeProgress,
+    this.supabaseClient,
   });
 
   final TmdbClient? client;
   final WatchlistController? watchlist;
   final EpisodeProgressController? episodeProgress;
+  final SupabaseClient? supabaseClient;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -35,6 +40,8 @@ class _AppShellState extends State<AppShell> {
   late final bool _ownsWatchlist;
   late final EpisodeProgressController _episodeProgress;
   late final bool _ownsEpisodeProgress;
+  AuthController? _auth;
+  CloudSyncController? _cloudSync;
 
   @override
   void initState() {
@@ -45,16 +52,32 @@ class _AppShellState extends State<AppShell> {
     _tmdbClient = widget.client ?? TmdbClient();
     _watchlist = widget.watchlist ?? WatchlistController();
     _episodeProgress = widget.episodeProgress ?? EpisodeProgressController();
-    if (!_watchlist.isLoaded) {
-      unawaited(_watchlist.load());
+    final supabase = widget.supabaseClient;
+    if (supabase != null) {
+      _auth = AuthController(supabase);
+      _cloudSync = CloudSyncController(
+        supabase: supabase,
+        tmdb: _tmdbClient,
+        auth: _auth!,
+        watchlist: _watchlist,
+        episodeProgress: _episodeProgress,
+      );
     }
-    if (!_episodeProgress.isLoaded) {
-      unawaited(_episodeProgress.load());
-    }
+    unawaited(_initializeData());
+  }
+
+  Future<void> _initializeData() async {
+    await Future.wait([
+      if (!_watchlist.isLoaded) _watchlist.load(),
+      if (!_episodeProgress.isLoaded) _episodeProgress.load(),
+    ]);
+    await _cloudSync?.start();
   }
 
   @override
   void dispose() {
+    _cloudSync?.dispose();
+    _auth?.dispose();
     if (_ownsClient) {
       _tmdbClient.close();
     }
@@ -82,7 +105,12 @@ class _AppShellState extends State<AppShell> {
         episodeProgress: _episodeProgress,
       ),
       const CalendarScreen(),
-      ProfileScreen(watchlist: _watchlist),
+      ProfileScreen(
+        watchlist: _watchlist,
+        episodeProgress: _episodeProgress,
+        auth: _auth,
+        cloudSync: _cloudSync,
+      ),
     ];
 
     return Scaffold(

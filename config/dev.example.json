@@ -1,3 +1,5 @@
 {
-  "TMDB_API_READ_TOKEN": "paste-your-tmdb-api-read-access-token-here"
+  "TMDB_API_READ_TOKEN": "paste-your-tmdb-api-read-access-token-here",
+  "SUPABASE_URL": "https://your-project.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "paste-your-supabase-publishable-key-here"
 }
